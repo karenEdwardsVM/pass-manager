@@ -27,7 +27,6 @@
        [min-width 200]
    	 	 [min-height h]))
 
-; for the opening screen, user choices
 (define (create-button n p c)
   (new button%
     [label n]
@@ -60,11 +59,11 @@
   (let* ([protection (create-frame "Try Me")]
          [password (create-text-field "Password" protection 
                      (lambda (elt e) 
-                       ;(displayln (send elt get-value))
-                       (when  (equal? (send e get-event-type) 'text-field-enter) 
+                       (displayln (send elt get-value))
+                       (when (equal? (send e get-event-type) 'text-field-enter) 
                          (if (equal? (send elt get-value) key) 
-                           ((send (choices) show #t)
-                            (send protection show #f)) 
+                           (begin (send (choices) show #t)
+                                  (send protection show #f))
                            (message-box "Error" "Invalid Password" protection '(stop ok))))))]) 
     protection))
 
@@ -90,6 +89,8 @@
   (let* ([display-frame (create-frame "Behold")]
          [l (read-passwords FILE)])
     (for/list ([i (in-range (length l))]) 
+      ;(new message% [label (string-append (entry-website (list-ref l i)) " " (entry-info (list-ref l i)))] 
+      ;(new message% [label (entry-website (list-ref l i))] [parent (display-frame)] [min-height 38]))
       (create-text-field (entry-website (list-ref l i)) display-frame (lambda (elt e) e) #t (entry-info (list-ref l i)) 38))
     display-frame))
 
@@ -100,7 +101,7 @@
     (close-input-port in)
     (map (lambda (i) (entry (entry-website i) (bytes->string/utf-8 (xor-en/decrypt (entry-info i) key)))) data)))
 
-(read-passwords FILE) ; test
+;(read-passwords FILE) ; test
 
 ; struct -> string
 (define (style-printing s)
