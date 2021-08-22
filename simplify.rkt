@@ -5,16 +5,15 @@
 (require 2htdp/batch-io)
 
 ; todo: 
-;   add a password at the beginning, to get into the program
 ;   check if the website that you are adding already exists, append info if it does
 ;   use the key from the beginning to encrypt data
-;   instead of text field for the display, use message
 
-(define (create-frame n)
+(define (create-frame n [a '(left top)])
   (new frame%
     [label n]
     [width 500]
-    [height 500]))
+    [height 500]
+    [alignment a]))
 
 ; create a text-field for user input of password
 (define (create-text-field n p c [e #t] [iv ""] [h 25]) ;[e #t]
@@ -59,7 +58,6 @@
   (let* ([protection (create-frame "Try Me")]
          [password (create-text-field "Password" protection 
                      (lambda (elt e) 
-                       (displayln (send elt get-value))
                        (when (equal? (send e get-event-type) 'text-field-enter) 
                          (if (equal? (send elt get-value) key) 
                            (begin (send (choices) show #t)
@@ -68,7 +66,7 @@
     protection))
 
 (define (choices)
-  (let* ([opening-frame (create-frame "The choice is yours")]
+  (let* ([opening-frame (create-frame "The choice is yours" '(center top))]
          [new-pass (create-button "New" opening-frame (swap-frames opening-frame (create-entry)))]
          [update-pass (create-button "Update" opening-frame (swap-frames opening-frame (create-entry)))]
          [view-pass (create-button "View" opening-frame (swap-frames opening-frame (view)))])
@@ -89,10 +87,15 @@
   (let* ([display-frame (create-frame "Behold")]
          [l (read-passwords FILE)])
     (for/list ([i (in-range (length l))]) 
-      ;(new message% [label (string-append (entry-website (list-ref l i)) " " (entry-info (list-ref l i)))] 
-      ;(new message% [label (entry-website (list-ref l i))] [parent (display-frame)] [min-height 38]))
-      (create-text-field (entry-website (list-ref l i)) display-frame (lambda (elt e) e) #t (entry-info (list-ref l i)) 38))
+      (new message% [label (string-append (entry-website (list-ref l i)) ":\n" (entry-info (list-ref l i)))] 
+                    [parent display-frame] 
+                    [min-height 38]
+                    [vert-margin 2]))
     display-frame))
+
+;(define (update)
+;  (let* ([update-frame (create-frame "Make Your Changes"]))
+;    )
 
 ; This reads the file as bytes, and decrypts only the info part of the entry
 (define (read-passwords file) 
@@ -117,8 +120,8 @@
               [en (entry (send site get-value)
                          (xor-en/decrypt 
                            (string->bytes/utf-8 
-                             (string-append "username:  " (send user get-value) 
-                                            "\npassword:   " pass)) key))])
+                             (string-append "\tusername:  " (send user get-value) 
+                                            "\n\tpassword:   " pass)) key))])
           (write (append password-list (list en)) out)
           (close-output-port out)))
           ;(displayln (string-append "site: " (send site get-value)))
