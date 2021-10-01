@@ -3,6 +3,7 @@
 #lang racket/base
 (require racket/gui)
 (require 2htdp/batch-io)
+(require racket/date)
 
 ; todo: 
 ;   check if the website that you are adding already exists, append info if it does
@@ -36,7 +37,7 @@
     [vert-margin 5]
     [horiz-margin 5]))
 
-(define key "asjeptmvntufj56")
+(define KEY "asjeptmvntufj56")
 (define FILE "testing")
 
 ; structure website name with the data to be encrypted (username, pass, etc)    
@@ -59,25 +60,25 @@
          [password (create-text-field "Password" protection 
                      (lambda (elt e) 
                        (when (equal? (send e get-event-type) 'text-field-enter) 
-                         (if (equal? (send elt get-value) key) 
-                           (begin (send (choices) show #t)
+                         (if (equal? (send elt get-value) KEY) 
+                           (begin (send (menu) show #t)
                                   (send protection show #f))
                            (message-box "Error" "Invalid Password" protection '(stop ok))))))]) 
     protection))
 
-(define (choices)
+(define (menu)
   (let* ([opening-frame (create-frame "The choice is yours" '(center top))]
          [new-pass (create-button "New" opening-frame (swap-frames opening-frame (create-entry)))]
-         [update-pass (create-button "Update" opening-frame (swap-frames opening-frame (create-entry)))]
+         [update-pass (create-button "Update" opening-frame (swap-frames opening-frame (update)))]
          [view-pass (create-button "View" opening-frame (swap-frames opening-frame (view)))])
     opening-frame))
 
 (define (create-entry)
-  (let* ([inputs (create-frame "The choice is yours")]
+  (let* ([inputs (create-frame "Create an Entry")]
          [website (create-text-field "Site Name" inputs (lambda (elt e) e))] 
          [username (create-text-field "Username" inputs (lambda (elt e) e))]
          [password (create-text-field "Pass it here" inputs (on-enter-key website username inputs))]
-         [enter-butt (create-button "Enter" inputs (lambda (elt e) 
+         [enter-butt (create-button "Enter" inputs (lambda (elt e)
                                                      (send (view) show #t)
                                                      (send inputs show #f)
                                                      (write-data FILE website username (send password get-value))))])
@@ -86,6 +87,7 @@
 (define (view)
   (let* ([display-frame (create-frame "Behold")]
          [l (read-passwords FILE)])
+    (displayln l)
     (for/list ([i (in-range (length l))]) 
       (new message% [label (string-append (entry-website (list-ref l i)) ":\n" (entry-info (list-ref l i)))] 
                     [parent display-frame] 
@@ -93,18 +95,56 @@
                     [vert-margin 2]))
     display-frame))
 
-;(define (update)
-;  (let* ([update-frame (create-frame "Make Your Changes"]))
-;    )
-
 ; This reads the file as bytes, and decrypts only the info part of the entry
-(define (read-passwords file) 
+(define (read-passwords file)
   (let* ([in (open-input-file file)]
          [data (read in)])
     (close-input-port in)
-    (map (lambda (i) (entry (entry-website i) (bytes->string/utf-8 (xor-en/decrypt (entry-info i) key)))) data)))
+    (map (lambda (i) (entry (entry-website i) (bytes->string/utf-8 (xor-en/decrypt (entry-info i) KEY)))) data)))
 
-;(read-passwords FILE) ; test
+(define (update)
+  (let* ([update-frame (create-frame "Make Your Changes")]
+         [website (new choice% [label "Site Name:"]
+                               [choices (site-list (read-passwords FILE))]
+                               [parent update-frame])]
+         [username (create-text-field "Username" update-frame (lambda (elt e) e))]
+         [password (create-text-field "Pass it here" update-frame (lambda (elt e) e))]
+         [enter-butt (create-button "Enter" update-frame (lambda (elt e)
+                                                           (displayln "entering")
+                                                           (update-entry FILE (send website get-string-selection)
+                                                                              (send username get-value)
+                                                                              (send password get-value))
+                                                           (send (view) show #t)
+                                                           (send update-frame show #f)))])
+    update-frame))
+
+(define (backup file)
+  (let* ([curr-date (string-replace (string-replace (date->string (current-date) #t) "," "") " " "-")])
+    (copy-file file (string-append file "-" curr-date))))
+
+; update callback for updating username and password of a website
+(define (update-entry file site user password)
+  (backup file)
+  (let* ([password-list (read-passwords file)]
+         [out (open-output-file file #:exists 'replace)]
+         [en (entry site (string-append "\tusername:  " user 
+                                        "\n\tpassword:   " password))])
+    (for ([i password-list])
+      (when (equal? site (entry-website i)) 
+        (set! password-list (remove (entry site (entry-info i)) password-list))))
+    (set! password-list (append password-list (list en)))
+    (write (map (lambda (i) (entry (entry-website i) (xor-en/decrypt (string->bytes/utf-8 (entry-info i)) KEY))) password-list) out)
+    (close-output-port out)))
+
+;(update-entry FILE "pickle" "cuke-change" "vine-change")
+;(displayln (read-passwords FILE))
+
+(define (site-list l)
+  (if (empty? l) (list "nothing to update")
+    (for/list ([i l])
+      (entry-website i))))
+
+;(site-list (read-passwords FILE)) ; test
 
 ; struct -> string
 (define (style-printing s)
@@ -116,14 +156,15 @@
 ; function for reading/writing to file 
 (define (write-data file site user pass)
   (let ([password-list (call-with-input-file file (lambda (in) (read in)))]
-              [out (open-output-file file #:exists 'replace)]
-              [en (entry (send site get-value)
-                         (xor-en/decrypt 
-                           (string->bytes/utf-8 
-                             (string-append "\tusername:  " (send user get-value) 
-                                            "\n\tpassword:   " pass)) key))])
-          (write (append password-list (list en)) out)
-          (close-output-port out)))
+        [out (open-output-file file #:exists 'replace)]
+        [en (entry (send site get-value)
+                   (xor-en/decrypt 
+                     (string->bytes/utf-8 
+                       (string-append "\tusername:  " (send user get-value) 
+                                      "\n\tpassword:   " pass)) KEY))])
+    (backup file)
+    (write (append password-list (list en)) out)
+    (close-output-port out)))
           ;(displayln (string-append "site: " (send site get-value)))
           ;(displayln (string-append "username: " (send user get-value)))
           ;(displayln (string-append "password: " pass))
@@ -137,4 +178,3 @@
       (send frame show #f))))
 
 (send (pass-protected) show #t)
-
