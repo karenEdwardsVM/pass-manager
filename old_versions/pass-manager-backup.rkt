@@ -6,8 +6,11 @@
 (require racket/date)
 
 ; todo: 
-;   check if the website that you are adding already exists, append info if it does
-;   use the key from the beginning to encrypt data
+;   need to make a key
+;   need to create a directory for back up files
+;   add passwords
+;   maybe backup button for view page? 
+;   enter keypress functionality for update page? 
 
 (define (create-frame n [a '(left top)])
   (new frame%
@@ -42,7 +45,7 @@
 
 ; structure website name with the data to be encrypted (username, pass, etc)    
 ; the website is a string and the entries for it is a list of strings
-(struct entry (website info) #:prefab) ;#:transparent)
+(struct entry (website info) #:prefab) 
 
 ; xor encryption
 (define (xor-en/decrypt str k) 
@@ -87,7 +90,6 @@
 (define (view)
   (let* ([display-frame (create-frame "Behold")]
          [l (read-passwords FILE)])
-    (displayln l)
     (for/list ([i (in-range (length l))]) 
       (new message% [label (string-append (entry-website (list-ref l i)) ":\n" (entry-info (list-ref l i)))] 
                     [parent display-frame] 
@@ -110,7 +112,6 @@
          [username (create-text-field "Username" update-frame (lambda (elt e) e))]
          [password (create-text-field "Pass it here" update-frame (lambda (elt e) e))]
          [enter-butt (create-button "Enter" update-frame (lambda (elt e)
-                                                           (displayln "entering")
                                                            (update-entry FILE (send website get-string-selection)
                                                                               (send username get-value)
                                                                               (send password get-value))
@@ -136,22 +137,15 @@
     (write (map (lambda (i) (entry (entry-website i) (xor-en/decrypt (string->bytes/utf-8 (entry-info i)) KEY))) password-list) out)
     (close-output-port out)))
 
-;(update-entry FILE "pickle" "cuke-change" "vine-change")
-;(displayln (read-passwords FILE))
-
+; For the update page choices, gives a list of websites
 (define (site-list l)
   (if (empty? l) (list "nothing to update")
     (for/list ([i l])
       (entry-website i))))
 
-;(site-list (read-passwords FILE)) ; test
-
 ; struct -> string
 (define (style-printing s)
   (string-append "website: " (entry-website s) "\n   " (entry-info s) "\n"))
-
-; test for displaying
-;(displayln (style-printing (list-ref (read-passwords FILE) 1)))
 
 ; function for reading/writing to file 
 (define (write-data file site user pass)
