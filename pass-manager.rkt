@@ -95,6 +95,9 @@
                     [parent display-frame] 
                     [min-height 38]
                     [vert-margin 2]))
+    (create-button "Back" display-frame (lambda (elt e) 
+                                          (send (menu) show #t)
+                                          (send display-frame show #f)))
     display-frame))
 
 ; This reads the file as bytes, and decrypts only the info part of the entry
@@ -121,7 +124,7 @@
 
 (define (backup file)
   (let* ([curr-date (string-replace (string-replace (date->string (current-date) #t) "," "") " " "-")])
-    (copy-file file (string-append file "-" curr-date))))
+    (copy-file file (string-append "backup/" file "-" curr-date))))
 
 ; update callback for updating username and password of a website
 (define (update-entry file site user password)
