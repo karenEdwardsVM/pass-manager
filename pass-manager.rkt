@@ -7,10 +7,9 @@
 
 ; todo: 
 ;   need to make a key
-;   need to create a directory for back up files
-;   add passwords
-;   maybe backup button for view page? 
 ;   enter keypress functionality for update page? 
+;   need to add scrolling functionality
+;   need to make pwords copy-able
 
 (define (create-frame n [a '(left top)])
   (new frame%
@@ -41,7 +40,7 @@
     [horiz-margin 5]))
 
 (define KEY "asjeptmvntufj56")
-(define FILE "testing")
+(define FILE "impasse.txt")
 
 ; structure website name with the data to be encrypted (username, pass, etc)    
 ; the website is a string and the entries for it is a list of strings
@@ -89,10 +88,16 @@
 
 (define (view)
   (let* ([display-frame (create-frame "Behold")]
+         [view-panel (new vertical-panel% [parent display-frame]
+                                 [style (list 'vscroll)]
+                                 [alignment (list 'left 'top)]
+                                 [horiz-margin 10]
+                                 [min-width (send display-frame get-width)]
+                                 [min-height (send display-frame get-height)])]
          [l (read-passwords FILE)])
     (for/list ([i (in-range (length l))]) 
       (new message% [label (string-append (entry-website (list-ref l i)) ":\n" (entry-info (list-ref l i)))] 
-                    [parent display-frame] 
+                    [parent view-panel] 
                     [min-height 38]
                     [vert-margin 2]))
     (create-button "Back" display-frame (lambda (elt e) 
