@@ -1,7 +1,7 @@
 #!/usr/bin/env racket
 
-#lang racket/base
-(require racket/gui)
+#lang racket
+(require racket/gui/base)
 (require 2htdp/batch-io)
 (require racket/date)
 
@@ -9,7 +9,6 @@
 ;   need to make a key
 ;   enter keypress functionality for update page? 
 ;   need to add scrolling functionality
-;   need to make pwords copy-able
 
 (define (create-frame n [a '(left top)])
   (new frame%
@@ -96,10 +95,24 @@
                                  [min-height (send display-frame get-height)])]
          [l (read-passwords FILE)])
     (for/list ([i (in-range (length l))]) 
-      (new message% [label (string-append (entry-website (list-ref l i)) ":\n" (entry-info (list-ref l i)))] 
+      (new message% [label (string-append (entry-website (list-ref l i)) ":")] 
                     [parent view-panel] 
-                    [min-height 38]
-                    [vert-margin 2]))
+                    [min-height 25]
+                    [vert-margin 0])
+      (new button% [label (string-trim (list-ref (string-split (entry-info (list-ref l i)) "password") 0))]
+                   [parent view-panel]
+                   [min-height 25]
+                   [vert-margin 0]
+                   [horiz-margin 15])
+      (new button% [label (string-trim (string-append "password" (list-ref (string-split (entry-info (list-ref l i)) "password") 1)))]
+                   [parent view-panel]
+                   [min-height 25]
+                   [vert-margin 0]
+                   [horiz-margin 15]
+                   [callback (lambda (elt e)
+                                (send the-clipboard set-clipboard-string 
+                                  (substring (list-ref (string-split (entry-info (list-ref l i)) "password") 1) 4)
+                                    (send e get-time-stamp)))]))
     (create-button "Back" display-frame (lambda (elt e) 
                                           (send (menu) show #t)
                                           (send display-frame show #f)))
@@ -167,9 +180,6 @@
     (backup file)
     (write (append password-list (list en)) out)
     (close-output-port out)))
-          ;(displayln (string-append "site: " (send site get-value)))
-          ;(displayln (string-append "username: " (send user get-value)))
-          ;(displayln (string-append "password: " pass))
 
 ; For new entry writing data on the enter keyboard press
 (define (on-enter-key site user frame) 
